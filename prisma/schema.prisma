@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model IngestSettings {
+  id        String       @id @default(cuid())
+  type      CategoryType
+  endpoint  String
+  apiKey    String
+  isEnabled Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model Category {
+  id       Int          @id @default(autoincrement())
+  name     String
+  type     CategoryType
+  comics   Comic[]
+  novels   Novel[]
+  Pictures Picture[]
+  videos   Video[]
+}
+
+model Video {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int
+  title       String
+  description String?
+  playUrl     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  dailyPlays  Int      @default(0)
+  playerType  String   @default("dplayer")
+  totalPlays  Int      @default(0)
+  weeklyPlays Int      @default(0)
+  externalId  String?  @unique
+  isActive    Boolean  @default(true)
+  coverUrl    String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Novel {
+  id          Int            @id @default(autoincrement())
+  externalId  String?         @unique // 添加这个字段
+  categoryId  Int
+  title       String
+  author      String
+  description String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  viewCount   Int            @default(0)
+  isActive    Boolean        @default(true)
+  coverUrl    String?
+  category    Category       @relation(fields: [categoryId], references: [id])
+  chapters    NovelChapter[]
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model NovelChapter {
+  id            Int      @id @default(autoincrement())
+  novelId       Int
+  chapterNumber Int
+  title         String
+  content       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  novel         Novel    @relation(fields: [novelId], references: [id])
+}
+
+model Picture {
+  id          Int            @id @default(autoincrement())
+  categoryId  Int
+  title       String
+  description String?
+  coverUrl    String?
+  views       Int            @default(0)
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  category    Category       @relation(fields: [categoryId], references: [id])
+  images      PictureImage[]
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model PictureImage {
+  id        Int      @id @default(autoincrement())
+  path      String
+  width     Int
+  height    Int
+  size      Int
+  mimeType  String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pictureId Int
+  picture   Picture  @relation(fields: [pictureId], references: [id])
+
+  @@index([pictureId])
+}
+
+model Comic {
+  id          Int            @id @default(autoincrement())
+  categoryId  Int
+  title       String
+  author      String?
+  description String?
+  coverUrl    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  views       Int            @default(0)
+  isActive    Boolean        @default(true)
+  category    Category       @relation(fields: [categoryId], references: [id])
+  chapters    ComicChapter[]
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model ComicChapter {
+  id            Int          @id @default(autoincrement())
+  comicId       Int
+  chapterNumber Int
+  title         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  comic         Comic        @relation(fields: [comicId], references: [id])
+  images        ComicImage[]
+
+  @@index([comicId])
+}
+
+model ComicImage {
+  id        Int          @id @default(autoincrement())
+  chapterId Int
+  path      String
+  width     Int
+  height    Int
+  size      Int
+  mimeType  String
+  order     Int
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  chapter   ComicChapter @relation(fields: [chapterId], references: [id])
+
+  @@index([chapterId])
+}
+
+model Advertisement {
+  id        Int               @id @default(autoincrement())
+  title     String
+  imagePath String
+  linkUrl   String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  order     Int
+  type      AdvertisementType
+}
+
+model FriendLink {
+  id        Int                @id @default(autoincrement())
+  name      String
+  url       String
+  logoUrl   String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  order     Int
+  position  FriendLinkPosition
+}
+
+model Tag {
+  id        Int         @id @default(autoincrement())
+  name      String
+  order     Int
+  url       String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  position  TagPosition
+}
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("user")
+  salt          String
+  sessions      Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model SystemSettings {
+  id        String   @id @default(cuid())
+  category  String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, key])
+}
+enum CategoryType {
+  Video
+  Novel
+  Picture
+  Comic
+}
+
+enum AdvertisementType {
+  BANNER
+  ICON
+}
+
+enum FriendLinkPosition {
+  TOP
+  BOTTOM
+}
+
+enum TagPosition {
+  TOP
+  BOTTOM
+}
