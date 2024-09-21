@@ -5,6 +5,10 @@
 await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+    publicRuntimeConfig: {
+        staticFolder: '/uploads',
+      },
+};
 
 export default config;
