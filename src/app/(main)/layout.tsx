@@ -6,6 +6,8 @@ import Category from '../_components/Category'
 import Heads from '../_components/heads'
 import IconAds from '../_components/IconAds'
 import Navbar from '../_components/navbar'
+import TopTags from '../_components/TopTags'
+import TopLinks from '../_components/TopLinks'
 
 export default function MainLayout({
   children,
@@ -21,6 +23,8 @@ export default function MainLayout({
           <Navbar />
           <Category />
           <IconAds />
+          <TopLinks />
+          <TopTags />
         </header>
         <main className="w-full flex-1 p-2">{children}</main>
         <IconAds />

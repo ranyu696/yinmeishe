@@ -83,7 +83,7 @@ export default async function NovelDetailPage({
                 <BookOpen className="mr-2" />
                 <span>{novel.chapters.length} 章节</span>
               </div>
-              <Link href={`/${novel.id}/chapter/1`}>
+              <Link href={`/novels/${novel.id}/chapter/1`}>
                 <Button color="primary">开始阅读</Button>
               </Link>
             </div>
@@ -94,7 +94,7 @@ export default async function NovelDetailPage({
       <h2 className="mb-4 text-2xl font-semibold">章节列表</h2>
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
         {novel.chapters.map((chapter) => (
-          <Link key={chapter.id} href={`/chapter/${chapter.chapterNumber}`}>
+          <Link key={chapter.id} href={`/novels/${novel.id}chapter/${chapter.chapterNumber}`}>
             <Button size="sm" variant="bordered" className="w-full">
               第 {chapter.chapterNumber} 章
             </Button>
