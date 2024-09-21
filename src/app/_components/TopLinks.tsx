@@ -7,7 +7,7 @@ const TopLinks = async () => {
   const links = await api.friendLink.getTopLinks();
 
   return (
-      <div className="mx-auto w-full px-4 py-2">
+      <div className="mx-auto w-full p-2">
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {links.map((link) => (
             <Link href={link.url} key={link.id}>

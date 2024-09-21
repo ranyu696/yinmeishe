@@ -60,7 +60,6 @@ export default async function Home() {
   return (
     <>
       <h1 className="mb-2 text-center text-4xl font-bold">欢迎来到内容中心</h1>
-
       <section className="mb-4">
         <h2 className="mb-4 text-2xl font-semibold">最新视频</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4">
