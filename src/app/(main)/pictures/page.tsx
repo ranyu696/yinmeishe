@@ -1,7 +1,8 @@
-import { Button, Card, CardBody, CardFooter } from '@nextui-org/react'
+import { Button} from '@nextui-org/react'
+import { type Picture } from '@prisma/client'
 import { ChevronRight } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
+import { PictureCard } from '~/app/_components/Card/PictureCard'
 import { api } from '~/trpc/server'
 
 export default async function PicturesHomePage() {
@@ -40,26 +41,10 @@ export default async function PicturesHomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {category.pictures.map((picture) => (
-              <Link key={picture.id} href={`/pictures/${picture.id}`} passHref>
-                <Card className="transition-shadow duration-300 hover:shadow-lg">
-                  <CardBody className="p-0">
-                    <Image
-                      src={picture.coverUrl ?? '/placeholder-image.jpg'}
-                      alt={picture.title}
-                      width={300}
-                      height={200}
-                      className="h-48 w-full object-cover"
-                    />
-                  </CardBody>
-                  <CardFooter className="justify-between text-small">
-                    <b>{picture.title}</b>
-                    <p className="text-default-500">
-                      {picture.images.length} 张图片
-                    </p>
-                  </CardFooter>
-                </Card>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5">
+            {category.pictures.map((picture:Picture) => (
+              <Link key={picture.id} href={`/pictures/${picture.id}`} >
+                 <PictureCard key={picture.id} picture={picture} />
               </Link>
             ))}
           </div>

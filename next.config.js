@@ -6,8 +6,9 @@ await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
 const config = {
-    publicRuntimeConfig: {
-        staticFolder: '/uploads',
+    reactStrictMode: true,
+    images: {
+        domains: ['localhost'], // 添加您的域名
       },
     experimental: {
         serverComponentsExternalPackages: ['sharp'],

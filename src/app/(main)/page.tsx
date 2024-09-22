@@ -114,7 +114,7 @@ export default async function Home() {
       </section>
       <section className="mb-12">
         <h2 className="mb-4 text-2xl font-semibold">最新图片</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {latestImages.pictures.map((picture: Picture) => (
             <PictureCard key={picture.id} picture={picture} />
           ))}
@@ -128,7 +128,7 @@ export default async function Home() {
 
       <section className="mb-12">
         <h2 className="mb-4 text-2xl font-semibold">热门小说</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {latestNovels.novels.map((novel: Novel) => (
             <NovelCard key={novel.id} novel={novel} />
           ))}

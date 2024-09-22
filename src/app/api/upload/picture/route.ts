@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import {  mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const pictureId = Number(formData.get('pictureId'));
 
     if (!file || !pictureId) {
-      return NextResponse.json({ error: 'Missing file or pictureId' }, { status: 400 });
+      return NextResponse.json({ error: '缺少文件或图片 ID' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -25,16 +25,12 @@ export async function POST(request: NextRequest) {
     // 确保目录存在
     await mkdir(dirname(filePath), { recursive: true });
 
-    // 先保存原始文件
-    await writeFile(filePath, buffer);
-
-    // 然后使用 sharp 处理图片
-    const optimizedFilePath = filePath.replace('.webp', '_optimized.webp');
+    // 直接使用 sharp 处理图片并保存为 WebP
     const imageInfo = await sharp(buffer)
       .webp({ quality: 80 })
-      .toFile(optimizedFilePath);
+      .toFile(filePath);
 
-    const relativePath = `/uploads/pictures/${pictureId}/${newFileName.replace('.webp', '_optimized.webp')}`;
+    const relativePath = `/uploads/pictures/${pictureId}/${newFileName}`;
 
     const newImage = await prisma.pictureImage.create({
       data: {

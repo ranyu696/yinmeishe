@@ -1,6 +1,6 @@
 import { type Metadata } from 'next'
 import Link from 'next/link'
-import { PictureCard } from '~/app/_components/Card/PictureCard'
+import ComicCard from '~/app/_components/Card/ComicCard'
 import PaginationWrapper from '~/app/_components/Pagination'
 import { api } from '~/trpc/server'
 
@@ -11,12 +11,11 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const categoryId = parseInt(params.id)
   const category = await api.category.getById({ id: categoryId })
-  const siteName =
-    ((await api.systemSettings.getOne({
-      category: 'general',
-      key: 'siteName',
-    })) as string) || '小新图片'
-  const picturesData = await api.picture.getAll({
+  const siteName = ((await api.systemSettings.getOne({
+    category: 'general',
+    key: 'siteName',
+  })) as string) || '小新漫画'
+  const comicsData = await api.comic.getAll({
     categoryId,
     page: 1,
     perPage: 1,
@@ -25,12 +24,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!category) {
     return {
       title: `分类未找到 - ${siteName}`,
-      description: '抱歉，我们找不到您请求的图片分类。',
+      description: '抱歉，我们找不到您请求的漫画分类。',
     }
   }
 
-  const title = `${category.name} 图片 - ${siteName}`
-  const description = `浏览 ${category.name} 分类下的精彩图片。当前有 ${picturesData.total} 张图片等待您的探索。`
+  const title = `${category.name} 漫画 - ${siteName}`
+  const description = `浏览 ${category.name} 分类下的精彩漫画。当前有 ${comicsData.total} 部漫画等待您的探索。`
 
   return {
     title,
@@ -43,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CategoryPage({
+export default async function ComicCategoryPage({
   params,
   searchParams,
 }: {
@@ -54,9 +53,9 @@ export default async function CategoryPage({
   const page = parseInt(searchParams.page ?? '1')
   const perPage = 20
 
-  const [categoryData, picturesData] = await Promise.all([
+  const [categoryData, comicsData] = await Promise.all([
     api.category.getById({ id: categoryId }),
-    api.picture.getAll({ categoryId, page, perPage }),
+    api.comic.getAll({ categoryId, page, perPage }),
   ])
 
   if (!categoryData) {
@@ -68,15 +67,15 @@ export default async function CategoryPage({
       <h1 className="mb-8 text-3xl font-bold">{categoryData.name}</h1>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {picturesData.pictures.map((picture) => (
-          <Link key={picture.id} href={`/pictures/${picture.id}`}>
-           <PictureCard key={picture.id} picture={picture} />
+        {comicsData.comics.map((comic) => (
+          <Link key={comic.id} href={`/comics/${comic.id}`}>
+            <ComicCard key={comic.id} comic={comic} />
           </Link>
         ))}
       </div>
 
       <div className="mt-8 flex justify-center">
-        <PaginationWrapper totalPages={picturesData.pages} />
+        <PaginationWrapper totalPages={comicsData.totalPages} />
       </div>
     </div>
   )
