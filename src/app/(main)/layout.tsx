@@ -10,6 +10,7 @@ import TopTags from '../_components/TopTags'
 import TopLinks from '../_components/TopLinks'
 import { PHProvider } from '../_components/posthog/providers'
 import PostHogPageView from '../_components/posthog/PostHogPageView'
+import { Suspense } from 'react'
 
 export default function MainLayout({
   children,
@@ -18,7 +19,9 @@ export default function MainLayout({
 }) {
   return (
     <PHProvider>
+      <Suspense fallback={null}>
       <PostHogPageView /> 
+      </Suspense>
     <div className="relative flex min-h-screen flex-col">
       <div className="mx-auto w-full max-w-7xl">
         <header className="w-full p-2">
