@@ -71,7 +71,7 @@ export default function UploadImageModal({
 
   const uploadNextFile = useCallback(
     async (index: number) => {
-      if (index >= files.length ?? uploadCompleteRef.current) {
+      if (index >= files.length || uploadCompleteRef.current) {
         if (!uploadCompleteRef.current) {
           uploadCompleteRef.current = true
           toast.success('所有章节图片上传成功!')
