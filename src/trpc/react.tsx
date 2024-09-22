@@ -23,16 +23,16 @@ const getQueryClient = () => {
 export const api = createTRPCReact<AppRouter>()
 
 /**
- * Inference helper for inputs.
+ * 输入的推理助手。
  *
- * @example type HelloInput = RouterInputs['example']['hello']
+ * @例子
  */
 export type RouterInputs = inferRouterInputs<AppRouter>
 
 /**
- * Inference helper for outputs.
+ * 输出的推理助手。
  *
- * @example type HelloOutput = RouterOutputs['example']['hello']
+ * @例子
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>
 

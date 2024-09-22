@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
-  useDisclosure,
   User,
   type Selection,
 } from '@nextui-org/react'
@@ -21,7 +20,8 @@ import { PlusIcon, SearchIcon } from 'lucide-react'
 import Link from 'next/link'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { ComicsForm } from '~/app/components/comics/ComicsForm'
+import { CreateComicForm } from '~/app/components/comics/CreateComicForm'
+import { EditComicForm } from '~/app/components/comics/EditComicForm'
 import { api } from '~/trpc/react'
 
 // 扩展 Comic 类型以包含关系
@@ -29,11 +29,13 @@ interface ExtendedComic extends Comic {
   category: Category
   chapters: { id: number }[]
 }
+
 export default function ComicsListPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set([]))
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingComic, setEditingComic] = useState<ExtendedComic | null>(null)
 
   const { data, isLoading, refetch } = api.comic.getAll.useQuery({
@@ -42,12 +44,14 @@ export default function ComicsListPage() {
     perPage: 10,
   })
 
+  const { data: categories } = api.category.getByType.useQuery({ type: 'Comic' })
+
   const deleteMutation = api.comic.deleteComic.useMutation()
   const updateMutation = api.comic.updateComic.useMutation()
 
   const handleEdit = (comic: ExtendedComic) => {
     setEditingComic(comic)
-    onOpen()
+    setIsEditModalOpen(true)
   }
 
   const handleDelete = async (id: number) => {
@@ -79,6 +83,13 @@ export default function ComicsListPage() {
     } catch (error) {
       console.error('更新漫画状态时出错:', error)
     }
+  }
+
+  const handleComicSaved = () => {
+    
+    setIsCreateModalOpen(false)
+    setIsEditModalOpen(false)
+    setEditingComic(null)
   }
 
   const columns = [
@@ -173,7 +184,7 @@ export default function ComicsListPage() {
         />
         <Button
           color="primary"
-          onPress={onOpen}
+          onPress={() => setIsCreateModalOpen(true)}
           startContent={<PlusIcon size={16} />}
         >
           添加新漫画
@@ -215,19 +226,25 @@ export default function ComicsListPage() {
           onChange={setPage}
         />
       </div>
-      <ComicsForm
-        isOpen={isOpen}
-        onClose={() => {
-          setEditingComic(null)
-          onClose()
-        }}
-        onComicSaved={async () => {
-          await refetch()
-          onClose()
-        }}
-        initialData={editingComic ?? undefined}
-        isEditing={!!editingComic}
+      <CreateComicForm
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onComicSaved={handleComicSaved}
+        categories={categories ?? []}
       />
+
+      {editingComic && (
+        <EditComicForm
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setEditingComic(null)
+          }}
+          onComicSaved={handleComicSaved}
+          categories={categories ?? []}
+          initialData={editingComic}
+        />
+      )}
     </div>
   )
 }

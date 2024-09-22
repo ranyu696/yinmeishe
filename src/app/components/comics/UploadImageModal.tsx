@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Button,
   Card,
@@ -9,15 +10,10 @@ import {
   ModalHeader,
   Progress,
 } from '@nextui-org/react'
+import { type ComicImage } from '@prisma/client'
 import { Upload, X } from 'lucide-react'
 import React, { useCallback, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
-import { api } from '~/trpc/react'
-import {
-  type ChapterUploadData,
-  type ChapterUploadResult,
-  processAndUploadImage,
-} from '~/utils/comic/uploadUtils'
 
 interface UploadImageModalProps {
   isOpen: boolean
@@ -34,25 +30,11 @@ export default function UploadImageModal({
   comicId,
   chapterNumber,
 }: UploadImageModalProps) {
-  {
-    console.log('账号:', chapterNumber)
-  }
   const [files, setFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [uploadedCount, setUploadedCount] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
   const uploadCompleteRef = useRef(false)
-
-  const uploadChapterImageMutation = api.comic.uploadChapterImage.useMutation({
-    onMutate: (variables) => {
-      console.log('Mutation variables:', variables)
-    },
-    onError: (error) => {
-      console.error('上传错误:', error)
-      toast.error(`上传章节图片失败: ${error.message}`)
-      setIsUploading(false)
-    },
-  })
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,10 +50,28 @@ export default function UploadImageModal({
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index))
   }, [])
 
+  const uploadFile = async (file: File, index: number) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('comicId', comicId.toString())
+    formData.append('chapterNumber', chapterNumber.toString())
+    formData.append('order', index.toString())
+
+    const response = await fetch('/api/upload/comic/chapter', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP 错误！地位: ${response.status}`)
+    }
+
+    return await response.json() as ComicImage;
+  }
+
   const uploadNextFile = useCallback(
     async (index: number) => {
-      console.log('uploadNextFile called with chapterNumber:', chapterNumber)
-      if (index >= files.length || uploadCompleteRef.current) {
+      if (index >= files.length ?? uploadCompleteRef.current) {
         if (!uploadCompleteRef.current) {
           uploadCompleteRef.current = true
           toast.success('所有章节图片上传成功!')
@@ -86,38 +86,22 @@ export default function UploadImageModal({
         await uploadNextFile(index + 1)
         return
       }
-      if (chapterNumber === null || chapterNumber === undefined) {
-        console.error('未设置章节号')
-        toast.error('上传失败：章节号未设置')
-        setIsUploading(false)
-        return
-      }
+
       try {
-        const _result = await processAndUploadImage(
-          file,
-          'chapter',
-          comicId,
-          (data) =>
-            uploadChapterImageMutation.mutateAsync(
-              data as ChapterUploadData,
-            ) as Promise<ChapterUploadResult>,
-          chapterNumber,
-          index,
-        )
+        await uploadFile(file, index)
         setUploadedCount((prev) => prev + 1)
         setUploadProgress(((index + 1) / files.length) * 100)
 
         await uploadNextFile(index + 1)
       } catch (error) {
-        console.error('上传错误:', chapterNumber, error)
-        toast.error(
-          `上传章节图片失败: chapterNumber ${chapterNumber}, ${(error as Error).message}`,
-        )
+        console.error('上传错误:', error)
+        toast.error(`上传章节图片失败: ${(error as Error).message}`)
         setIsUploading(false)
       }
     },
-    [files, comicId, chapterNumber, uploadChapterImageMutation, onSuccess],
+    [files, comicId, chapterNumber, onSuccess],
   )
+
   const handleSubmit = useCallback(() => {
     if (files.length > 0 && !isUploading) {
       setIsUploading(true)
@@ -128,7 +112,6 @@ export default function UploadImageModal({
     }
   }, [files, isUploading, uploadNextFile])
 
-  // 在所有上传完成后清理状态
   const handleCloseModal = useCallback(() => {
     setFiles([])
     setUploadedCount(0)

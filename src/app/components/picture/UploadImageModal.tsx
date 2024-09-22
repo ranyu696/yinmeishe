@@ -1,3 +1,4 @@
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -9,23 +10,17 @@ import {
   ModalFooter,
   ModalHeader,
   Progress,
-} from '@nextui-org/react'
-import { AlertCircle, Upload, X } from 'lucide-react'
-import React, { useCallback, useRef, useState } from 'react'
-import { toast } from 'react-toastify'
-import { api } from '~/trpc/react'
-import { processAndUploadImage } from '~/utils/image/uploadUtils'
+} from '@nextui-org/react';
+import { AlertCircle, Upload, X } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { type PictureImage } from '@prisma/client';
 
 interface UploadImageModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  imageSetId: number
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  imageSetId: number;
 }
-
-const MAX_FILE_SIZE = 30 * 1024 * 1024 // 20MB
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_CONCURRENT_UPLOADS = 3 // 最大并发上传数
 
 export default function UploadImageModal({
   isOpen,
@@ -33,103 +28,105 @@ export default function UploadImageModal({
   onSuccess,
   imageSetId,
 }: UploadImageModalProps) {
-  const [files, setFiles] = useState<File[]>([])
-  const [uploadProgress, setUploadProgress] = useState<number[]>([])
-  const [uploadedCount, setUploadedCount] = useState<number>(0)
-  const [isUploading, setIsUploading] = useState(false)
-  const [processingFiles, setProcessingFiles] = useState<string[]>([])
-  const uploadCompleteRef = useRef(false)
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [totalProgress, setTotalProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropAreaRef = useRef<HTMLDivElement>(null);
 
-  const uploadImage = api.picture.uploadImage.useMutation()
+  const handleFileChange = useCallback((fileList: FileList | null) => {
+    if (fileList) {
+      const newFiles = Array.from(fileList).filter((file) => {
+        if (file.size > 20 * 1024 * 1024) {
+          toast.warn(`文件 ${file.name} 超过20MB限制，已被忽略`);
+          return false;
+        }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+          toast.warn(`文件 ${file.name} 类型不支持，请上传 JPG, PNG 或 WebP 格式`);
+          return false;
+        }
+        return true;
+      });
+      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    }
+  }, []);
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) {
-        const fileList: FileList = e.target.files
-        const newFiles = Array.from(fileList).filter((file) => {
-          if (file.size > MAX_FILE_SIZE) {
-            toast.warn(`文件 ${file.name} 超过20MB限制，已被忽略`)
-            return false
-          }
-          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            toast.warn(
-              `文件 ${file.name} 类型不支持，请上传 JPG, PNG 或 WebP 格式`,
-            )
-            return false
-          }
-          return true
-        })
+  const handleRemoveFile = useCallback((fileName: string) => {
+    setFiles((prevFiles) => prevFiles.filter((file) => file.name !== fileName));
+    setUploadProgress((prev) => {
+      const newProgress = { ...prev };
+      delete newProgress[fileName];
+      return newProgress;
+    });
+  }, []);
+
+  const handleUpload = useCallback(async () => {
+    setIsUploading(true);
+    setTotalProgress(0);
   
-        setFiles((prevFiles) => [...prevFiles, ...newFiles])
-      }
-    },
-    [setFiles]
-  )
-  const handleRemoveFile = useCallback((index: number) => {
-    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index))
-    setUploadProgress((prev) => prev.filter((_, i) => i !== index))
-    toast.info('已移除文件')
-  }, [])
-
-  const uploadFile = useCallback(
-    async (file: File, index: number) => {
-      setProcessingFiles((prev) => [...prev, file.name])
+    for (const file of files) {
       try {
-        await processAndUploadImage(file, imageSetId, async (data) => {
-          const result = await uploadImage.mutateAsync(data)
-          // 适配返回类型
-          return { url: result.path, ...result }
-        })
-        setUploadedCount((prev) => prev + 1)
-        setUploadProgress((prev) => prev.map((p, i) => (i === index ? 100 : p)))
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('pictureId', imageSetId.toString());
+  
+        const response = await fetch('/api/upload/picture', {
+          method: 'POST',
+          body: formData,
+        });
+  
+        if (!response.ok) {
+          throw new Error('上传失败');
+        }
+  
+        const result = await response.json() as PictureImage;
+        console.log(`文件 ${file.name} 上传成功，路径: ${result.path}`);
+        toast.success(`${file.name} 上传成功`);
+  
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
+        setTotalProgress((prev) => prev + (1 / files.length) * 100);
       } catch (error) {
-        console.error('上传错误:', error)
-        toast.error(`上传 ${file.name} 失败: ${(error as Error).message}`)
-      } finally {
-        setProcessingFiles((prev) => prev.filter((name) => name !== file.name))
+        console.error('上传错误:', error);
+        toast.error(`上传 ${file.name} 失败: ${(error as Error).message}`);
       }
-    },
-    [imageSetId, uploadImage],
-  )
-  const uploadFiles = useCallback(async () => {
-    const uploadPromises = files.map(
-      (file, index) => () => uploadFile(file, index),
-    )
-
-    // 使用 p-limit 来限制并发数
-    const pLimit = (await import('p-limit')).default
-    const limit = pLimit(MAX_CONCURRENT_UPLOADS)
-
-    await Promise.all(
-      uploadPromises.map((uploadPromise) => limit(uploadPromise)),
-    )
-
-    setIsUploading(false)
-    if (!uploadCompleteRef.current) {
-      uploadCompleteRef.current = true
-      toast.success('所有图片上传成功!')
-      onSuccess()
-      setTimeout(() => {
-        onClose()
-        setFiles([])
-        setUploadedCount(0)
-        setUploadProgress([])
-        uploadCompleteRef.current = false
-      }, 1000)
     }
-  }, [files, uploadFile, onSuccess, onClose])
+  
+    setIsUploading(false);
+    onSuccess();
+    setFiles([]);
+    setUploadProgress({});
+    setTotalProgress(0);
+  }, [files, imageSetId, onSuccess]);
 
-  const handleSubmit = useCallback(() => {
-    if (files.length > 0 && !isUploading) {
-      setIsUploading(true)
-      setUploadedCount(0)
-      uploadCompleteRef.current = false
-      void uploadFiles()
-    }
-  }, [files, isUploading, uploadFiles])
+  // 实现拖放功能
+  React.useEffect(() => {
+    const dropArea = dropAreaRef.current;
+    if (!dropArea) return;
 
-  const totalProgress =
-    uploadProgress.reduce((sum, progress) => sum + progress, 0) / files.length
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer?.files) {
+        handleFileChange(e.dataTransfer.files);
+      }
+    };
+
+    dropArea.addEventListener('dragover', handleDragOver);
+    dropArea.addEventListener('drop', handleDrop);
+
+    return () => {
+      dropArea.removeEventListener('dragover', handleDragOver);
+      dropArea.removeEventListener('drop', handleDrop);
+    };
+  }, [handleFileChange]);
+
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalContent>
@@ -141,23 +138,25 @@ export default function UploadImageModal({
                 <CardBody>
                   <input
                     type="file"
-                    onChange={handleFileChange}
-                    accept={ALLOWED_FILE_TYPES.join(',')}
+                    onChange={(e) => handleFileChange(e.target.files)}
                     multiple
                     className="hidden"
                     id="file-upload"
+                    ref={fileInputRef}
                   />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-gray-400">
-                      <Upload className="mx-auto size-12 text-gray-400" />
-                      <p className="mt-1 text-sm text-gray-600">
-                        点击或拖拽文件到此处上传
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        支持 JPG, PNG, WebP / 最大 5MB
-                      </p>
-                    </div>
-                  </label>
+                  <div
+                    ref={dropAreaRef}
+                    className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-gray-400"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mx-auto size-12 text-gray-400" />
+                    <p className="mt-1 text-sm text-gray-600">
+                      点击或拖拽文件到此处上传
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      支持 JPG, PNG, WebP / 最大 20MB
+                    </p>
+                  </div>
                 </CardBody>
               </Card>
 
@@ -167,9 +166,9 @@ export default function UploadImageModal({
                     已选择 {files.length} 个文件:
                   </p>
                   <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
-                    {files.map((file, index) => (
+                    {files.map((file) => (
                       <li
-                        key={index}
+                        key={file.name}
                         className="flex items-center justify-between rounded bg-gray-100 p-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -180,15 +179,22 @@ export default function UploadImageModal({
                           />
                           <span className="truncate text-sm">{file.name}</span>
                         </div>
-                        <Button
-                          isIconOnly
-                          color="danger"
-                          variant="light"
-                          onPress={() => handleRemoveFile(index)}
-                          size="sm"
-                        >
-                          <X size={18} />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Progress
+                            value={uploadProgress[file.name] ?? 0}
+                            size="sm"
+                            className="w-24"
+                          />
+                          <Button
+                            isIconOnly
+                            color="danger"
+                            variant="light"
+                            onPress={() => handleRemoveFile(file.name)}
+                            size="sm"
+                          >
+                            <X size={18} />
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -201,14 +207,9 @@ export default function UploadImageModal({
                     value={totalProgress}
                     className="mt-4"
                     label="总体上传进度"
-                    valueLabel={`${uploadedCount}/${files.length}`}
+                    valueLabel={`${Math.round(totalProgress)}%`}
                     showValueLabel={true}
                   />
-                  {processingFiles.length > 0 && (
-                    <p className="text-sm text-gray-600">
-                      正在处理: {processingFiles.join(', ')}
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -230,7 +231,7 @@ export default function UploadImageModal({
               </Button>
               <Button
                 color="primary"
-                onPress={handleSubmit}
+                onPress={handleUpload}
                 isDisabled={files.length === 0 || isUploading}
                 isLoading={isUploading}
               >
@@ -241,5 +242,5 @@ export default function UploadImageModal({
         )}
       </ModalContent>
     </Modal>
-  )
+  );
 }

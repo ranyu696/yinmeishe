@@ -8,6 +8,8 @@ import IconAds from '../_components/IconAds'
 import Navbar from '../_components/navbar'
 import TopTags from '../_components/TopTags'
 import TopLinks from '../_components/TopLinks'
+import { PHProvider } from '../_components/posthog/providers'
+import PostHogPageView from '../_components/posthog/PostHogPageView'
 
 export default function MainLayout({
   children,
@@ -15,6 +17,8 @@ export default function MainLayout({
   children: React.ReactNode
 }) {
   return (
+    <PHProvider>
+      <PostHogPageView /> 
     <div className="relative flex min-h-screen flex-col">
       <div className="mx-auto w-full max-w-7xl">
         <header className="w-full p-2">
@@ -43,5 +47,6 @@ export default function MainLayout({
         </Link>
       </footer>
     </div>
+    </PHProvider>
   )
 }

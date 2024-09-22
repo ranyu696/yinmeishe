@@ -9,6 +9,9 @@ const config = {
     publicRuntimeConfig: {
         staticFolder: '/uploads',
       },
+    experimental: {
+        serverComponentsExternalPackages: ['sharp'],
+      },
 };
 
 export default config;

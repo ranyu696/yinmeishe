@@ -9,45 +9,8 @@ import {
   publicProcedure,
 } from '~/server/api/trpc'
 import { db } from '~/server/db'
-import { uploadPictureImage } from '~/server/uploadFunctions'
 
 export const pictureRouter = createTRPCRouter({
-  // 上传图片
-  uploadImage: protectedProcedure
-    .input(
-      z.object({
-        pictureId: z.number(),
-        imageData: z.string(),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      const { pictureId, imageData } = input
-
-      const picture = await db.picture.findUnique({ where: { id: pictureId } })
-      if (!picture) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Picture not found' })
-      }
-
-      const imageInfo = await uploadPictureImage(imageData, pictureId)
-
-      const newImage = await db.pictureImage.create({
-        data: {
-          ...imageInfo,
-          pictureId,
-          order: (await db.pictureImage.count({ where: { pictureId } })) + 1,
-        },
-      })
-
-      // 如果这是第一张图片，请将其设置为封面
-      if (!picture.coverUrl) {
-        await db.picture.update({
-          where: { id: pictureId },
-          data: { coverUrl: newImage.path },
-        })
-      }
-
-      return newImage
-    }),
   // 获取图片集列表
   getAll: publicProcedure
     .input(
@@ -135,6 +98,7 @@ export const pictureRouter = createTRPCRouter({
       })
     }),
 
+  // 更新图片集
   update: protectedProcedure
     .input(
       z.object({
@@ -176,8 +140,17 @@ export const pictureRouter = createTRPCRouter({
             await fs.remove(fullPath)
           } catch (error) {
             console.error(`删除图像文件失败: ${image.path}`, error)
-            // 继续删除其他图片
+            // 继续删除其他图片，但可能需要记录这个错误
           }
+        }
+
+        // 删除图片集的目录
+        try {
+          const pictureDir = path.join(process.cwd(), 'public', 'uploads', 'pictures', input.id.toString())
+          await fs.remove(pictureDir)
+        } catch (error) {
+          console.error(`删除图片集目录失败: ${input.id}`, error)
+          // 继续执行，但可能需要记录这个错误
         }
 
         // 从数据库中删除图片和所有关联图像
@@ -219,13 +192,13 @@ export const pictureRouter = createTRPCRouter({
           where: { id: image.pictureId },
         })
         if (picture && picture.coverUrl === image.path) {
-          const newcoverUrl = await tx.pictureImage.findFirst({
+          const newCoverUrl = await tx.pictureImage.findFirst({
             where: { pictureId: picture.id },
             orderBy: { order: 'asc' },
           })
           await tx.picture.update({
             where: { id: picture.id },
-            data: { coverUrl: newcoverUrl?.path ?? null },
+            data: { coverUrl: newCoverUrl?.path ?? null },
           })
         }
 
@@ -275,7 +248,7 @@ export const pictureRouter = createTRPCRouter({
     }),
 
   // 设置封面图片
-  setcoverUrl: protectedProcedure
+  setCoverUrl: protectedProcedure
     .input(
       z.object({
         pictureId: z.number(),
@@ -308,6 +281,7 @@ export const pictureRouter = createTRPCRouter({
 
       return { success: true }
     }),
+
   // 增加浏览量
   incrementViews: publicProcedure
     .input(z.object({ id: z.number() }))

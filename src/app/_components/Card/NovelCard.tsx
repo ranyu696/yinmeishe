@@ -17,7 +17,6 @@ interface NovelCardProps {
 const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
   return (
     <Card isPressable isHoverable className="max-w-[200px]">
-      {' '}
       {/* 调整最大宽度 */}
       <Link href={`/novels/${novel.id}`}>
         <CardHeader className="aspect-square p-0">

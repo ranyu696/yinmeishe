@@ -8,11 +8,35 @@ import {
   publicProcedure,
 } from '~/server/api/trpc'
 import { db } from '~/server/db'
-import { uploadChapterImage, uploadComicCover } from '~/server/uploadFunctions'
+
+// 定义 Comic 和 ComicImage 的 Zod schema
+const ComicSchema = z.object({
+  id: z.number(),
+  categoryId: z.number(),
+  title: z.string(),
+  author: z.string().nullable(),
+  description: z.string().nullable(),
+  coverUrl: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  views: z.number(),
+  isActive: z.boolean(),
+})
+
+const ComicImageSchema = z.object({
+  id: z.number(),
+  chapterId: z.number(),
+  path: z.string(),
+  width: z.number(),
+  height: z.number(),
+  size: z.number(),
+  mimeType: z.string(),
+  order: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
 
 export const comicRouter = createTRPCRouter({
-  // Comic CRUD operations
-
   getAll: publicProcedure
     .input(
       z.object({
@@ -28,7 +52,7 @@ export const comicRouter = createTRPCRouter({
       const skip = (page - 1) * perPage
 
       const where: Prisma.ComicWhereInput = {
-        isActive: (isActive ?? undefined) ? isActive : undefined,
+        isActive: isActive ?? undefined,
         categoryId: categoryId ?? undefined,
       }
 
@@ -92,42 +116,22 @@ export const comicRouter = createTRPCRouter({
       },
     })
   }),
+
   createComic: protectedProcedure
-    .input(
-      z.object({
-        title: z.string(),
-        author: z.string().optional(),
-        description: z.string().optional(),
-        categoryId: z.number(),
-        coverImagePath: z.string().nullable().optional(),
-        isActive: z.boolean().default(true),
-      }),
-    )
+    .input(ComicSchema.omit({ id: true, createdAt: true, updatedAt: true, views: true }).extend({
+      isActive: z.boolean().default(true),
+    }))
     .mutation(async ({ input }) => {
       return db.comic.create({
-        data: {
-          ...input,
-          isActive: input.isActive ?? true, // 确保有默认值
-        },
+        data: input,
       })
     }),
 
   updateComic: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        title: z.string().optional(),
-        author: z.string().optional(),
-        description: z.string().optional(),
-        categoryId: z.number().optional(),
-        coverImagePath: z.string().nullable().optional(),
-        isActive: z.boolean().optional(),
-      }),
-    )
+    .input(ComicSchema.partial().extend({ id: z.number() }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input
 
-      // 确保至少有一个字段被更新
       if (Object.keys(data).length === 0) {
         throw new Error('至少需要更新一个字段')
       }
@@ -137,48 +141,13 @@ export const comicRouter = createTRPCRouter({
         data,
       })
     }),
+
   deleteComic: protectedProcedure
     .input(z.number())
     .mutation(async ({ input: id }) => {
       return db.comic.delete({ where: { id } })
     }),
 
-  // 上传漫画封面
-  uploadCover: protectedProcedure
-    .input(
-      z.object({
-        comicId: z.number(),
-        imageSource: z.string(),
-        shouldSync: z.boolean().optional(),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      const { comicId, imageSource, shouldSync } = input
-      const result = await uploadComicCover(comicId, imageSource, shouldSync)
-      return { success: true, ...result }
-    }),
-
-  uploadChapterImage: protectedProcedure
-    .input(
-      z.object({
-        comicId: z.number(),
-        chapterNumber: z.number(),
-        imageSource: z.string(),
-        order: z.number(),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      const { comicId, chapterNumber, imageSource, order } = input
-      const result = await uploadChapterImage(
-        comicId,
-        chapterNumber,
-        imageSource,
-        order,
-      )
-      return { success: true, ...result }
-    }),
-
-  // ComicChapter CRUD 操作
   createChapter: protectedProcedure
     .input(
       z.object({
@@ -220,7 +189,6 @@ export const comicRouter = createTRPCRouter({
     .input(z.number())
     .mutation(async ({ input: chapterId }) => {
       return db.$transaction(async (tx) => {
-        // 获取章节信息
         const chapter = await tx.comicChapter.findUnique({
           where: { id: chapterId },
           include: { comic: true, images: true },
@@ -230,23 +198,19 @@ export const comicRouter = createTRPCRouter({
           throw new Error('Chapter not found')
         }
 
-        // 删除图片文件
         for (const image of chapter.images) {
           const filePath = path.join(process.cwd(), 'public', image.path)
           await fs.remove(filePath).catch(console.error)
         }
 
-        // 删除图片记录
         await tx.comicImage.deleteMany({
           where: { chapterId },
         })
 
-        // 删除章节
         await tx.comicChapter.delete({
           where: { id: chapterId },
         })
 
-        // 删除章节目录
         const chapterDir = path.join(
           process.cwd(),
           'public',
@@ -262,7 +226,6 @@ export const comicRouter = createTRPCRouter({
       })
     }),
 
-  // 新增：获取特定章节详情
   getByNumber: publicProcedure
     .input(
       z.object({
@@ -287,7 +250,7 @@ export const comicRouter = createTRPCRouter({
         },
       })
     }),
-  // 新增：获取相关漫画推荐
+
   getRelatedComics: publicProcedure
     .input(
       z.object({
@@ -321,13 +284,9 @@ export const comicRouter = createTRPCRouter({
         },
       })
     }),
+
   updateImageOrder: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        order: z.number(),
-      }),
-    )
+    .input(ComicImageSchema.pick({ id: true, order: true }))
     .mutation(async ({ input }) => {
       const { id, order } = input
       return db.comicImage.update({
@@ -341,11 +300,11 @@ export const comicRouter = createTRPCRouter({
     .mutation(async ({ input: id }) => {
       return db.comicImage.delete({ where: { id } })
     }),
-  // 增加浏览量
+
   incrementViews: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      return db.picture.update({
+      return db.comic.update({
         where: { id: input.id },
         data: { views: { increment: 1 } },
       })
