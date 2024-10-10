@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { DarkModeSwitch } from './DarkModeSwitch'
 
-const Heads = async () => {
+const Header = async () => {
   return (
     <Navbar isBordered maxWidth="xl">
       <NavbarContent justify="start">
@@ -41,4 +41,4 @@ const Heads = async () => {
   )
 }
 
-export default Heads
+export default Header

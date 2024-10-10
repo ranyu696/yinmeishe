@@ -4,13 +4,12 @@ import BottomLinks from '../_components/BottomLinks'
 import BottomTags from '../_components/BottomTags'
 import Categor from '../_components/Categor'
 import Footer from '../_components/Footer'
-import Heads from '../_components/Heads';
-
 import IconAds from '../_components/IconAds'
 import PostHogPageView from '../_components/posthog/PostHogPageView'
 import { PHProvider } from '../_components/posthog/providers'
 import TopLinks from '../_components/TopLinks'
 import TopTags from '../_components/TopTags'
+import Header from '../_components/Header'
 
 export default function MainLayout({
   children,
@@ -25,7 +24,7 @@ export default function MainLayout({
       <div className="relative flex min-h-screen flex-col">
         <div className="mx-auto w-full max-w-7xl">
           <header className="w-full p-2">
-            <Heads />
+            <Header />
             <Banner />
             <Categor />
             <IconAds />
