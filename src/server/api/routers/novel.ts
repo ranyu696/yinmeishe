@@ -1,8 +1,7 @@
 // src/server/api/routers/novel.ts
 import { type Prisma } from '@prisma/client'
 import { z } from 'zod'
-import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
-import { uploadNovelCover } from '~/server/uploadFunctions'
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc'
 
 export const novelRouter = createTRPCRouter({
   // 小说相关操作
@@ -90,7 +89,7 @@ export const novelRouter = createTRPCRouter({
         select: { categoryId: true },
       })
 
-      if (!novel) throw new Error('Novel not found')
+      if (!novel) throw new Error('小说没找到')
 
       return ctx.db.novel.findMany({
         where: {
@@ -99,11 +98,18 @@ export const novelRouter = createTRPCRouter({
           isActive: true,
         },
         take: input.limit,
-        orderBy: { viewCount: 'desc' },
+        orderBy: { views: 'desc' },
         select: {
           id: true,
+          externalId: true,
+          categoryId: true,
           title: true,
           author: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+          views: true,
+          isActive: true,
           coverUrl: true,
         },
       })
@@ -114,7 +120,7 @@ export const novelRouter = createTRPCRouter({
         title: z.string(),
         author: z.string(),
         description: z.string(),
-        coverUrl: z.string(),
+        coverUrl: z.string().nullable(),
         categoryId: z.number(),
         isActive: z.boolean().default(true),
       }),
@@ -139,7 +145,7 @@ export const novelRouter = createTRPCRouter({
         title: z.string(),
         author: z.string(),
         description: z.string(),
-        coverUrl: z.string(),
+        coverUrl: z.string().nullable(),
         categoryId: z.number(),
         isActive: z.boolean(),
       }),
@@ -166,23 +172,26 @@ export const novelRouter = createTRPCRouter({
       })
     }),
 
-  uploadCover: publicProcedure
+  updateCategory: protectedProcedure
     .input(
       z.object({
-        imageSource: z.string(),
-        shouldSync: z.boolean().default(false),
+        ids: z.array(z.number()),
+        categoryId: z.number(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const { imageSource, shouldSync } = input
-
-      try {
-        const result = await uploadNovelCover(imageSource, shouldSync)
-        return { coverUrl: result.coverPath }
-      } catch (error) {
-        console.error('封面上传失败:', error)
-        throw new Error('封面上传失败')
-      }
+    .mutation(async ({ ctx, input }) => {
+      const { ids, categoryId } = input
+      await ctx.db.novel.updateMany({
+        where: { id: { in: ids } },
+        data: { categoryId },
+      })
+    }),
+  deleteMany: protectedProcedure
+    .input(z.array(z.number()))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.novel.deleteMany({
+        where: { id: { in: input } },
+      })
     }),
   toggleActive: publicProcedure
     .input(z.object({ id: z.number(), isActive: z.boolean() }))
@@ -193,13 +202,13 @@ export const novelRouter = createTRPCRouter({
       })
     }),
 
-  incrementViewCount: publicProcedure
+  incrementviews: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.novel.update({
         where: { id: input.id },
         data: {
-          viewCount: {
+          views: {
             increment: 1,
           },
         },

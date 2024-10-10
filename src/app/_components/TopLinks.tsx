@@ -1,20 +1,26 @@
-import React from 'react';
-import { api } from '~/trpc/server';
-import TrackableLink from './Trackable/TrackableLink';
-import { type FriendLink } from '@prisma/client';
+// components/TopLinks.tsx
+import { type FriendLink } from '@prisma/client'
+import { api } from '~/trpc/server'
+import TrackableLink from './Trackable/TrackableLink'
 
 const TopLinks = async () => {
-  const links = await api.friendLink.getTopLinks();
+  const links = await api.friendLink.getTopLinks()
 
   return (
-    <div className="mx-auto w-full p-2">
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+    <div className="mx-auto mt-2 w-full">
+      <h2 className="mb-2 text-sm font-bold">名站推荐</h2>
+      <div className="-mx-0.5 flex flex-wrap">
         {links.map((link: FriendLink) => (
-          <TrackableLink key={link.id} href={link.url} name={link.name} />
+          <div
+            key={link.id}
+            className="w-[22%] p-0.5 sm:w-[24%] md:w-[16%] lg:w-[9.8%]"
+          >
+            <TrackableLink href={link.url} name={link.name} />
+          </div>
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TopLinks;
+export default TopLinks

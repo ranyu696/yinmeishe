@@ -118,9 +118,16 @@ export const comicRouter = createTRPCRouter({
   }),
 
   createComic: protectedProcedure
-    .input(ComicSchema.omit({ id: true, createdAt: true, updatedAt: true, views: true }).extend({
-      isActive: z.boolean().default(true),
-    }))
+    .input(
+      ComicSchema.omit({
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        views: true,
+      }).extend({
+        isActive: z.boolean().default(true),
+      }),
+    )
     .mutation(async ({ input }) => {
       return db.comic.create({
         data: input,
@@ -146,6 +153,20 @@ export const comicRouter = createTRPCRouter({
     .input(z.number())
     .mutation(async ({ input: id }) => {
       return db.comic.delete({ where: { id } })
+    }),
+
+  bulkDeleteComics: protectedProcedure
+    .input(z.array(z.number()))
+    .mutation(async ({ input: ids }) => {
+      // 使用 Prisma 的 deleteMany 方法批量删除
+      const result = await db.comic.deleteMany({
+        where: {
+          id: { in: ids },
+        },
+      })
+
+      // 返回删除的记录数
+      return { count: result.count }
     }),
 
   createChapter: protectedProcedure

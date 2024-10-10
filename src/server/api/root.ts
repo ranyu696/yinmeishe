@@ -3,6 +3,9 @@ import { postRouter } from '~/server/api/routers/post'
 import { videoRouter } from '~/server/api/routers/video'
 import { createCallerFactory, createTRPCRouter } from '~/server/api/trpc'
 import { advertisementRouter } from './routers/advertisement'
+import { categoryMappingRouter } from './routers/collector/categoryMapping'
+import { collectorRouter } from './routers/collector/collector'
+import { externalApiRouter } from './routers/collector/externalApi'
 import { comicRouter } from './routers/comic'
 import { friendLinkRouter } from './routers/friendLink'
 import { ingestSettingsRouter } from './routers/ingestSettings'
@@ -30,9 +33,12 @@ export const appRouter = createTRPCRouter({
   comic: comicRouter,
   systemSettings: systemSettingsRouter,
   search: searchRouter,
+  externalApi: externalApiRouter,
+  categoryMapping: categoryMappingRouter,
+  collector: collectorRouter,
 })
 
-// export type definition of API
+// API导出类型定义
 export type AppRouter = typeof appRouter
 
 /**

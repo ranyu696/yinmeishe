@@ -66,7 +66,7 @@ export default function UploadImageModal({
       throw new Error(`HTTP 错误！地位: ${response.status}`)
     }
 
-    return await response.json() as ComicImage;
+    return (await response.json()) as ComicImage
   }
 
   const uploadNextFile = useCallback(

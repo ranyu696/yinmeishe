@@ -1,15 +1,10 @@
 import { Button, Card, CardBody, Image } from '@nextui-org/react'
-import { type Novel, type NovelChapter } from '@prisma/client'
 import { BookOpen } from 'lucide-react'
 import { type Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import NovelCard from '~/app/_components/Card/NovelCard'
 import { api } from '~/trpc/server'
-
-type NovelWithChapters = Novel & {
-  chapters: NovelChapter[]
-}
 
 type Props = {
   params: { id: string }
@@ -20,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const novel = await api.novel.getById({ id: novelId })
   const siteName =
     ((await api.systemSettings.getOne({
-      category: 'general',
+      category: 'basic',
       key: 'siteName',
     })) as string) || '小新小说'
 
@@ -53,11 +48,8 @@ export default async function NovelDetailPage({
   params: { id: string }
 }) {
   const novelId = parseInt(params.id)
-  const novel = (await api.novel.getById({ id: novelId })) as NovelWithChapters
-  const relatedNovels = (await api.novel.getRelatedNovels({
-    novelId,
-    limit: 4,
-  })) as Novel[]
+  const novel = await api.novel.getById({ id: novelId })
+  const relatedNovels = await api.novel.getRelatedNovels({ novelId, limit: 12 })
 
   if (!novel) return notFound()
 
@@ -94,7 +86,10 @@ export default async function NovelDetailPage({
       <h2 className="mb-4 text-2xl font-semibold">章节列表</h2>
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
         {novel.chapters.map((chapter) => (
-          <Link key={chapter.id} href={`/novels/${novel.id}/chapter/${chapter.chapterNumber}`}>
+          <Link
+            key={chapter.id}
+            href={`/novels/${novel.id}/chapter/${chapter.chapterNumber}`}
+          >
             <Button size="sm" variant="bordered" className="w-full">
               第 {chapter.chapterNumber} 章
             </Button>
@@ -103,7 +98,7 @@ export default async function NovelDetailPage({
       </div>
 
       <h2 className="mb-4 text-2xl font-semibold">相关推荐</h2>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {relatedNovels.map((relatedNovel) => (
           <NovelCard key={relatedNovel.id} novel={relatedNovel} />
         ))}

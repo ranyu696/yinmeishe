@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const chapter = await api.novel.getChapterByNumber({ novelId, chapterNumber })
   const siteName =
     ((await api.systemSettings.getOne({
-      category: 'general',
+      category: 'basic',
       key: 'siteName',
     })) as string) || '小新小说'
 

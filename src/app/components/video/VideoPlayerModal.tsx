@@ -5,8 +5,10 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Select,
+  SelectItem,
 } from '@nextui-org/react'
-import { type Video } from '@prisma/client'
+import { type Video, type VideoSource } from '@prisma/client'
 import {
   Gesture,
   isHLSProvider,
@@ -20,11 +22,12 @@ import {
 } from '@vidstack/react/player/layouts/default'
 import '@vidstack/react/player/styles/default/layouts/video.css'
 import '@vidstack/react/player/styles/default/theme.css'
+import { useState } from 'react'
 
 interface VideoPlayerModalProps {
   isOpen: boolean
   onClose: () => void
-  video: Video
+  video: Video & { videoSources: VideoSource[] }
 }
 
 export default function VideoPlayerModal({
@@ -32,6 +35,8 @@ export default function VideoPlayerModal({
   onClose,
   video,
 }: VideoPlayerModalProps) {
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState(0)
+  const videoSources = video.videoSources || []
   function onProviderChange(provider: MediaProviderAdapter | null) {
     if (isHLSProvider(provider)) {
       // 默认开发 URL。
@@ -42,15 +47,33 @@ export default function VideoPlayerModal({
         'https://cdn.bootcdn.net/ajax/libs/hls.js/1.5.11/hls.min.js'
     }
   }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="3xl">
       <ModalContent>
         <ModalHeader>{video.title}</ModalHeader>
         <ModalBody>
+          {video.videoSources.length > 1 && (
+            <Select
+              label="选择播放源"
+              selectedKeys={[selectedSourceIndex.toString()]}
+              onSelectionChange={(keys) => {
+                const selectedKey = Array.from(keys)[0] as string
+                setSelectedSourceIndex(parseInt(selectedKey))
+              }}
+              className="mb-4"
+            >
+              {video.videoSources.map((source, index) => (
+                <SelectItem key={index} value={index.toString()}>
+                  播放源 {index + 1} ({source.playerType})
+                </SelectItem>
+              ))}
+            </Select>
+          )}
           <MediaPlayer
             playsInline
             title={video.title}
-            src={video.playUrl}
+            src={videoSources[selectedSourceIndex]?.playUrl}
             aspectRatio="16/9"
             onProviderChange={onProviderChange}
           >

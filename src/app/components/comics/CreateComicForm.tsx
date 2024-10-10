@@ -1,4 +1,3 @@
-import React, { useState, useCallback } from 'react'
 import {
   Button,
   Image,
@@ -12,18 +11,18 @@ import {
   SelectItem,
   Textarea,
 } from '@nextui-org/react'
+import { type Category, type Comic } from '@prisma/client'
+import React, { useCallback, useState } from 'react'
 import { toast } from 'react-toastify'
 import { api } from '~/trpc/react'
-import { type Category, type Comic } from '@prisma/client'
-
 
 type ComicFormData = Omit<Comic, 'id' | 'createdAt' | 'updatedAt' | 'views'>
 
 type ComicFormProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  onComicSaved: () => void;
-  categories: Category[];
+  isOpen: boolean
+  onClose: () => void
+  onComicSaved: () => void
+  categories: Category[]
 }
 export function CreateComicForm({
   isOpen,
@@ -48,34 +47,34 @@ export function CreateComicForm({
 
   const handleCoverImageChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+      const file = e.target.files?.[0]
       if (file) {
-        setIsUploading(true);
+        setIsUploading(true)
         try {
-          const formData = new FormData();
-          formData.append('file', file);
+          const formData = new FormData()
+          formData.append('file', file)
           const response = await fetch('/api/upload/comic/cover', {
             method: 'POST',
             body: formData,
-          });
+          })
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`)
           }
-          const result = await response.json() as Comic
-          setComic((prev) => ({ ...prev, coverUrl: result.coverUrl }));
-          setPreviewImage(result.coverUrl);
-          setRemoteImageUrl('');
-          toast.success('封面图片上传成功');
+          const result = (await response.json()) as Comic
+          setComic((prev) => ({ ...prev, coverUrl: result.coverUrl }))
+          setPreviewImage(result.coverUrl)
+          setRemoteImageUrl('')
+          toast.success('封面图片上传成功')
         } catch (error) {
-          console.error('封面图片上传失败:', error);
-          toast.error('封面图片上传失败，请重试');
+          console.error('封面图片上传失败:', error)
+          toast.error('封面图片上传失败，请重试')
         } finally {
-          setIsUploading(false);
+          setIsUploading(false)
         }
       }
     },
-    []
-  );
+    [],
+  )
 
   const handleRemoteImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +84,7 @@ export function CreateComicForm({
       setComic((prev) => ({ ...prev, coverUrl: url }))
     },
     [],
-  );
+  )
 
   const handleSaveComic = async () => {
     try {
@@ -94,10 +93,10 @@ export function CreateComicForm({
         ...comic,
         coverUrl: coverUrl ?? null,
       }
-      
+
       const _savedComic = await createComic.mutateAsync(comicData)
       toast.success('新漫画创建成功')
-      
+
       onClose()
       setComic({
         title: '',
@@ -125,9 +124,7 @@ export function CreateComicForm({
       isKeyboardDismissDisabled={true}
     >
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">
-          创建新漫画
-        </ModalHeader>
+        <ModalHeader className="flex flex-col gap-1">创建新漫画</ModalHeader>
         <ModalBody>
           <Input
             label="标题"
@@ -137,7 +134,9 @@ export function CreateComicForm({
           <Input
             label="作者"
             value={comic.author ?? ''}
-            onChange={(e) => setComic({ ...comic, author: e.target.value || null })}
+            onChange={(e) =>
+              setComic({ ...comic, author: e.target.value || null })
+            }
           />
           <Textarea
             label="描述"

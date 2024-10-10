@@ -8,7 +8,7 @@ import { api } from '~/trpc/server'
 export async function generateMetadata(): Promise<Metadata> {
   const siteName =
     ((await api.systemSettings.getOne({
-      category: 'general',
+      category: 'basic',
       key: 'siteName',
     })) as string) ?? '小新小说'
   const totalNovelsData = await api.novel.getAll({})
@@ -36,7 +36,7 @@ export default async function NovelsHomePage() {
       const novelsData = await api.novel.getAll({
         categoryId: category.id,
         page: 1,
-        perPage: 4,
+        perPage: 12,
         isActive: true,
       })
       return {
@@ -56,7 +56,6 @@ export default async function NovelsHomePage() {
             <h2 className="text-2xl font-semibold">{category.name}</h2>
             <Link href={`/novels/category/${category.id}`}>
               <Button
-                as="a"
                 color="primary"
                 variant="ghost"
                 endContent={<ChevronRight size={16} />}

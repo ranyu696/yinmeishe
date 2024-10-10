@@ -21,14 +21,17 @@ import {
   TableRow,
   useDisclosure,
 } from '@nextui-org/react'
-import { type Video } from '@prisma/client'
+import { type Video, type VideoSource } from '@prisma/client'
 import { Edit, Play, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'react-toastify'
 import DeleteConfirmModal from '~/app/components/shared/DeleteConfirmModal'
-import { VideoForm } from '~/app/components/video/VideoForm'
+import { VideoCreateForm } from '~/app/components/video/VideoCreateForm'
+import { VideoEditForm } from '~/app/components/video/VideoEditForm'
 import VideoPlayerModal from '~/app/components/video/VideoPlayerModal'
 import { api } from '~/trpc/react'
+
+type VideoWithSources = Video & { videoSources: VideoSource[] }
 
 export default function VideosPage() {
   const [page, setPage] = useState(1)
@@ -39,9 +42,14 @@ export default function VideosPage() {
   )
 
   const {
-    isOpen: isFormOpen,
-    onOpen: onFormOpen,
-    onClose: onFormClose,
+    isOpen: isCreateFormOpen,
+    onOpen: onCreateFormOpen,
+    onClose: onCreateFormClose,
+  } = useDisclosure()
+  const {
+    isOpen: isEditFormOpen,
+    onOpen: onEditFormOpen,
+    onClose: onEditFormClose,
   } = useDisclosure()
   const {
     isOpen: isDeleteModalOpen,
@@ -54,9 +62,13 @@ export default function VideosPage() {
     onClose: onPlayerModalClose,
   } = useDisclosure()
 
-  const [editingVideo, setEditingVideo] = useState<Video | null>(null)
-  const [videoToDelete, setVideoToDelete] = useState<Video | null>(null)
-  const [videoToPlay, setVideoToPlay] = useState<Video | null>(null)
+  const [editingVideo, setEditingVideo] = useState<VideoWithSources | null>(
+    null,
+  )
+  const [videoToDelete, setVideoToDelete] = useState<VideoWithSources | null>(
+    null,
+  )
+  const [videoToPlay, setVideoToPlay] = useState<VideoWithSources | null>(null)
 
   const videosQuery = api.video.getAll.useQuery({
     page,
@@ -86,18 +98,22 @@ export default function VideosPage() {
   }
 
   const handleAddVideo = () => {
-    setEditingVideo(null)
-    onFormOpen()
+    onCreateFormOpen()
   }
 
-  const handleEditVideo = (video: Video) => {
+  const handleEditVideo = (video: VideoWithSources) => {
     setEditingVideo(video)
-    onFormOpen()
+    onEditFormOpen()
   }
 
-  const handleDeleteVideo = (video: Video) => {
+  const handleDeleteVideo = (video: VideoWithSources) => {
     setVideoToDelete(video)
     onDeleteModalOpen()
+  }
+
+  const handlePlayVideo = (video: VideoWithSources) => {
+    setVideoToPlay(video)
+    onPlayerModalOpen()
   }
 
   const confirmDelete = async () => {
@@ -114,11 +130,6 @@ export default function VideosPage() {
         console.error('删除视频失败:', error)
       }
     }
-  }
-
-  const handlePlayVideo = (video: Video) => {
-    setVideoToPlay(video)
-    onPlayerModalOpen()
   }
 
   const handleToggleActive = async (video: Video, isActive: boolean) => {
@@ -268,7 +279,7 @@ export default function VideosPage() {
                 </TableCell>
                 <TableCell>{video.title}</TableCell>
                 <TableCell>{video.category?.name}</TableCell>
-                <TableCell>{video.totalPlays}</TableCell>
+                <TableCell>{video.views}</TableCell>
                 <TableCell>
                   <Switch
                     defaultSelected
@@ -312,20 +323,36 @@ export default function VideosPage() {
         </Table>
       )}
 
-      <VideoForm
-        isOpen={isFormOpen}
-        onClose={onFormClose}
-        video={editingVideo}
+      <VideoCreateForm
+        isOpen={isCreateFormOpen}
+        onClose={onCreateFormClose}
         onSuccess={async () => {
           try {
             await videosQuery.refetch()
-            onFormClose()
+            onCreateFormClose()
           } catch (error) {
             console.error('刷新视频列表失败:', error)
             toast.error('刷新视频列表失败')
           }
         }}
       />
+
+      {editingVideo && (
+        <VideoEditForm
+          isOpen={isEditFormOpen}
+          onClose={onEditFormClose}
+          video={editingVideo}
+          onSuccess={async () => {
+            try {
+              await videosQuery.refetch()
+              onEditFormClose()
+            } catch (error) {
+              console.error('刷新视频列表失败:', error)
+              toast.error('刷新视频列表失败')
+            }
+          }}
+        />
+      )}
 
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
@@ -335,7 +362,7 @@ export default function VideosPage() {
         content="您确定要删除这个视频吗？此操作不可撤销。"
       />
 
-      {videoToPlay && (
+      {videoToPlay && videoToPlay.videoSources && (
         <VideoPlayerModal
           isOpen={isPlayerModalOpen}
           onClose={onPlayerModalClose}

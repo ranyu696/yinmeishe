@@ -9,6 +9,7 @@ import { SidebarMenu } from './sidebar-menu'
 import { Sidebar } from './sidebar.styles'
 
 import {
+  Cable,
   ChartArea,
   ChartBarStacked,
   Combine,
@@ -106,6 +107,12 @@ export const SidebarWrapper = () => {
                 title="标签管理"
                 icon={<Tag />}
                 href="/admin/tags"
+              />
+              <SidebarItem
+                isActive={pathname === '/collection'}
+                title="采集管理"
+                icon={<Cable />}
+                href="/admin/collection"
               />
               <SidebarItem
                 isActive={pathname === '/ingest-settings'}

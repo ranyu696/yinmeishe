@@ -53,12 +53,9 @@ export async function POST(request: NextRequest) {
 
     // 准备 Prisma 创建数据
     const videoData: Prisma.VideoCreateInput = {
-      externalId: fields.externalId ?? undefined,
       title: fields.title,
       description: fields.description ?? undefined,
       coverUrl: fields.coverUrl,
-      playUrl: fields.playUrl,
-      playerType: fields.playerType ?? 'dplayer',
       category: {
         connect: { id: parseInt(fields.categoryId, 10) },
       },

@@ -22,9 +22,10 @@ import {
 } from '@nextui-org/react'
 import { type Novel } from '@prisma/client'
 import { Book, Edit, Plus, Search, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
-import { NovelModal } from '~/app/components/novels/NovelModal'
+import { NovelCreateForm } from '~/app/components/novels/NovelCreateForm'
+import { NovelEditForm } from '~/app/components/novels/NovelEditForm'
 import DeleteConfirmModal from '~/app/components/shared/DeleteConfirmModal'
 import { api } from '~/trpc/react'
 
@@ -35,8 +36,18 @@ export default function NovelsPage() {
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>(
     undefined,
   )
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set([]))
 
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isCreateOpen,
+    onOpen: onCreateOpen,
+    onClose: onCreateClose,
+  } = useDisclosure()
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure()
   const [editingNovel, setEditingNovel] = useState<Novel | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [novelToDelete, setNovelToDelete] = useState<Novel | null>(null)
@@ -52,6 +63,12 @@ export default function NovelsPage() {
   })
   const deleteNovelMutation = api.novel.delete.useMutation()
   const toggleActiveMutation = api.novel.toggleActive.useMutation()
+  const updateCategoryMutation = api.novel.updateCategory.useMutation()
+  const deleteMultipleNovelsMutation = api.novel.deleteMany.useMutation()
+
+  const selectedNovelIds = useMemo(() => {
+    return Array.from(selectedKeys).map((key) => parseInt(key))
+  }, [selectedKeys])
 
   const handleSearch = (value: string) => {
     setSearch(value)
@@ -69,17 +86,44 @@ export default function NovelsPage() {
   }
 
   const handleAddNovel = () => {
-    setEditingNovel(null)
-    onOpen()
+    onCreateOpen()
   }
 
   const handleEditNovel = (novel: Novel) => {
     setEditingNovel(novel)
-    onOpen()
+    onEditOpen()
   }
+
   const handleDeleteNovel = (novel: Novel) => {
     setNovelToDelete(novel)
     setIsDeleteModalOpen(true)
+  }
+
+  const handleBulkDelete = async () => {
+    try {
+      await deleteMultipleNovelsMutation.mutateAsync(selectedNovelIds)
+      toast.success('批量删除小说成功')
+      await novelsQuery.refetch()
+      setSelectedKeys(new Set())
+    } catch (error) {
+      console.error('批量删除小说失败:', error)
+      toast.error('批量删除小说失败，请重试')
+    }
+  }
+
+  const handleBulkUpdateCategory = async (categoryId: number) => {
+    try {
+      await updateCategoryMutation.mutateAsync({
+        ids: selectedNovelIds,
+        categoryId,
+      })
+      toast.success('批量更新分类成功')
+      await novelsQuery.refetch()
+      setSelectedKeys(new Set())
+    } catch (error) {
+      console.error('批量更新分类失败:', error)
+      toast.error('批量更新分类失败，请重试')
+    }
   }
 
   const confirmDelete = async () => {
@@ -123,34 +167,62 @@ export default function NovelsPage() {
               value={search}
               onValueChange={handleSearch}
             />
-            <Dropdown>
-              <DropdownTrigger>
-                <Button variant="bordered">
-                  {categoryFilter
-                    ? categories.find((c) => c.id === categoryFilter)?.name
-                    : '选择分类'}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="分类选择"
-                onAction={(key) =>
-                  handleCategoryFilter(key === 'all' ? undefined : Number(key))
-                }
+            <div className="flex items-center space-x-2">
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button variant="bordered">
+                    {categoryFilter
+                      ? categories.find((c) => c.id === categoryFilter)?.name
+                      : '选择分类'}
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  aria-label="分类选择"
+                  onAction={(key) =>
+                    handleCategoryFilter(
+                      key === 'all' ? undefined : Number(key),
+                    )
+                  }
+                >
+                  {categories.map((category) => (
+                    <DropdownItem key={category.id.toString()}>
+                      {category.name}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </Dropdown>
+              <Button
+                color="danger"
+                onPress={handleBulkDelete}
+                isDisabled={selectedKeys.size === 0}
               >
-                {categories.map((category) => (
-                  <DropdownItem key={category.id.toString()}>
-                    {category.name}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
-            </Dropdown>
-            <Button
-              color="primary"
-              onPress={handleAddNovel}
-              startContent={<Plus />}
-            >
-              添加新小说
-            </Button>
+                批量删除
+              </Button>
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button isDisabled={selectedKeys.size === 0}>
+                    批量移动分类
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  aria-label="批量移动分类"
+                  onAction={(key) => handleBulkUpdateCategory(Number(key))}
+                >
+                  {categories.map((category) => (
+                    <DropdownItem key={category.id}>
+                      {category.name}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </Dropdown>
+              <Button
+                color="primary"
+                onPress={handleAddNovel}
+                startContent={<Plus />}
+              >
+                添加新小说
+              </Button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <span>总计: {novelsQuery.data?.totalCount} 本小说</span>
@@ -180,6 +252,11 @@ export default function NovelsPage() {
       ) : (
         <Table
           aria-label="小说列表"
+          selectionMode="multiple"
+          selectedKeys={selectedKeys}
+          onSelectionChange={(selection) => {
+            setSelectedKeys(selection as Set<string>)
+          }}
           bottomContent={
             novelsQuery.data && novelsQuery.data.totalPages > 1 ? (
               <div className="flex w-full justify-center">
@@ -209,20 +286,22 @@ export default function NovelsPage() {
             <TableColumn>状态</TableColumn>
             <TableColumn>操作</TableColumn>
           </TableHeader>
-          <TableBody emptyContent="没有可显示的小说。">
-            {(novelsQuery.data?.novels ?? []).map((novel) => (
+          <TableBody
+            emptyContent="没有可显示的小说。"
+            items={novelsQuery.data?.novels ?? []}
+          >
+            {(novel) => (
               <TableRow key={novel.id}>
                 <TableCell>{novel.title}</TableCell>
                 <TableCell>{novel.author}</TableCell>
                 <TableCell>{novel.category?.name}</TableCell>
                 <TableCell>{novel.chapterCount}</TableCell>
-                <TableCell>{novel.viewCount}</TableCell>
+                <TableCell>{novel.views}</TableCell>
                 <TableCell>
                   {new Date(novel.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
                   <Switch
-                    defaultSelected
                     isSelected={novel.isActive}
                     onValueChange={(isActive) =>
                       void handleToggleActive(novel, isActive)
@@ -259,20 +338,30 @@ export default function NovelsPage() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       )}
 
-      <NovelModal
-        isOpen={isOpen}
-        onClose={onClose}
-        novel={editingNovel}
+      <NovelCreateForm
+        isOpen={isCreateOpen}
+        onClose={onCreateClose}
         onSuccess={async () => {
           await novelsQuery.refetch()
-          onClose()
+          onCreateClose()
         }}
       />
+      {editingNovel && (
+        <NovelEditForm
+          isOpen={isEditOpen}
+          onClose={onEditClose}
+          novel={editingNovel}
+          onSuccess={async () => {
+            await novelsQuery.refetch()
+            onEditClose()
+          }}
+        />
+      )}
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

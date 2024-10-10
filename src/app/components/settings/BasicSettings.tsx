@@ -11,24 +11,19 @@ type SettingValue =
 type BasicSettingsProps = {
   settings: Record<string, SettingValue>
   onChange: (key: string, value: SettingValue) => void
-  onFileUpload: (file: File, key: string) => void
+  onFileChange: (
+    event: React.ChangeEvent<HTMLInputElement>,
+    key: string,
+  ) => void
+  uploading: boolean
 }
 
 function BasicSettings({
   settings,
   onChange,
-  onFileUpload,
+  onFileChange,
+  uploading,
 }: BasicSettingsProps) {
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    key: string,
-  ) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      onFileUpload(file, key)
-    }
-  }
-
   return (
     <div className="space-y-4">
       <Input
@@ -55,8 +50,9 @@ function BasicSettings({
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => handleFileChange(e, 'logoUrl')}
+          onChange={(e) => onFileChange(e, 'logoUrl')}
           className="mt-2"
+          disabled={uploading}
         />
       </div>
       <div>
@@ -68,10 +64,12 @@ function BasicSettings({
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => handleFileChange(e, 'faviconUrl')}
+          onChange={(e) => onFileChange(e, 'faviconUrl')}
           className="mt-2"
+          disabled={uploading}
         />
       </div>
+      {uploading && <p>上传中...</p>}
       <Input
         label="联系邮箱"
         value={settings.contactEmail as string}

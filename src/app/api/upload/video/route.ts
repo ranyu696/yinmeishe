@@ -1,0 +1,45 @@
+import { mkdir } from 'fs/promises'
+import { type NextRequest, NextResponse } from 'next/server'
+import { dirname, join } from 'path'
+import sharp from 'sharp'
+import { v4 as uuidv4 } from 'uuid'
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return NextResponse.json({ error: '缺少文件' }, { status: 400 })
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const newFileName = `${uuidv4()}.webp`
+    const date = new Date()
+    const datePath = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`
+    const uploadDir = join(
+      process.cwd(),
+      'public',
+      'uploads',
+      'videos',
+      datePath,
+    )
+    const filePath = join(uploadDir, newFileName)
+
+    // 确保目录存在
+    await mkdir(dirname(filePath), { recursive: true })
+
+    // 使用 sharp 处理图片并保存为 WebP
+    await sharp(buffer).webp({ quality: 80 }).toFile(filePath)
+
+    const relativePath = `/uploads/videos/${datePath}/${newFileName}`
+
+    return NextResponse.json({ coverUrl: relativePath })
+  } catch (error) {
+    console.error('上传错误:', error)
+    return NextResponse.json(
+      { error: '上传文件时出错', details: (error as Error).message },
+      { status: 500 },
+    )
+  }
+}

@@ -1,4 +1,4 @@
-import { Button} from '@nextui-org/react'
+import { Button } from '@nextui-org/react'
 import { type Picture } from '@prisma/client'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -31,7 +31,6 @@ export default async function PicturesHomePage() {
             <h2 className="text-2xl font-semibold">{category.name}</h2>
             <Link href={`/pictures/category/${category.id}`} passHref>
               <Button
-                as="a"
                 color="primary"
                 variant="ghost"
                 endContent={<ChevronRight size={16} />}
@@ -42,9 +41,9 @@ export default async function PicturesHomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5">
-            {category.pictures.map((picture:Picture) => (
-              <Link key={picture.id} href={`/pictures/${picture.id}`} >
-                 <PictureCard key={picture.id} picture={picture} />
+            {category.pictures.map((picture: Picture) => (
+              <Link key={picture.id} href={`/pictures/${picture.id}`}>
+                <PictureCard key={picture.id} picture={picture} />
               </Link>
             ))}
           </div>

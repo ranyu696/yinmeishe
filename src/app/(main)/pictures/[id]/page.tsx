@@ -1,22 +1,25 @@
+// app/picture/[id]/page.tsx
 import { Button } from '@nextui-org/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { type Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import MasonryGallery from '~/app/_components/MasonryGallery'
 import { api } from '~/trpc/server'
+import Loading from './loading'
 
 type Props = {
   params: { id: string }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const pictureId = parseInt(params.id)
-  const picture = await api.picture.getById(pictureId)
-  const siteName =
-    ((await api.systemSettings.getOne({
-      category: 'general',
+  const [picture, siteName] = await Promise.all([
+    api.picture.getById(parseInt(params.id)),
+    api.systemSettings.getOne({
+      category: 'basic',
       key: 'siteName',
-    })) as string) || '小新图片'
+    }) as Promise<string>,
+  ])
 
   if (!picture) {
     return {
@@ -48,17 +51,19 @@ export default async function PictureSetPage({
 }) {
   const imageSet = await api.picture.getById(parseInt(params.id))
 
-  if (!imageSet) return notFound() // 触发 Next.js 的 404 页面;
+  if (!imageSet) return notFound()
 
   return (
-    <div className="container mx-auto px-1 py-2">
+    <div className="container mx-auto px-4 py-8">
       <h1 className="mb-6 text-3xl font-bold">{imageSet.title}</h1>
 
       {imageSet.description && (
         <p className="mb-8 text-gray-600">{imageSet.description}</p>
       )}
 
-      <MasonryGallery images={imageSet.images} title={imageSet.title} />
+      <Suspense fallback={<Loading />}>
+        <MasonryGallery images={imageSet.images} title={imageSet.title} />
+      </Suspense>
 
       <div className="mt-10 flex items-center justify-between">
         <Button color="primary" variant="ghost" startContent={<ChevronLeft />}>

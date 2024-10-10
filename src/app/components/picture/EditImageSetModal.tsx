@@ -211,7 +211,7 @@ export default function EditImageSetModal({
     >
       <ModalContent>
         <ModalHeader className="flex items-center justify-between">
-          <span>编辑图集</span>        
+          <span>编辑图集</span>
           <div className="flex space-x-2">
             <Tooltip content={isReordering ? '完成重新排序' : '重新排序图片'}>
               <Button onClick={toggleReordering}>

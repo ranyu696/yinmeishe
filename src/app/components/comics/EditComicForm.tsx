@@ -1,4 +1,3 @@
-import React, { useState, useCallback, useEffect } from 'react'
 import {
   Button,
   Image,
@@ -12,20 +11,21 @@ import {
   SelectItem,
   Textarea,
 } from '@nextui-org/react'
+import { type Category, type Comic } from '@prisma/client'
+import React, { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import { api } from '~/trpc/react'
-import { type Category, type Comic } from '@prisma/client';
 
 interface EditComicFormProps extends ComicFormProps {
-  initialData: Comic;
+  initialData: Comic
 }
 type ComicFormData = Omit<Comic, 'id' | 'createdAt' | 'updatedAt' | 'views'>
 
 type ComicFormProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  onComicSaved: () => void;
-  categories: Category[];
+  isOpen: boolean
+  onClose: () => void
+  onComicSaved: () => void
+  categories: Category[]
 }
 export function EditComicForm({
   isOpen,
@@ -43,9 +43,13 @@ export function EditComicForm({
     isActive: initialData.isActive,
   })
 
-  const [previewImage, setPreviewImage] = useState<string | null>(initialData.coverUrl)
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    initialData.coverUrl,
+  )
   const [isUploading, setIsUploading] = useState(false)
-  const [remoteImageUrl, setRemoteImageUrl] = useState(initialData.coverUrl ?? '')
+  const [remoteImageUrl, setRemoteImageUrl] = useState(
+    initialData.coverUrl ?? '',
+  )
 
   const updateComic = api.comic.updateComic.useMutation()
 
@@ -64,35 +68,35 @@ export function EditComicForm({
 
   const handleCoverImageChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+      const file = e.target.files?.[0]
       if (file) {
-        setIsUploading(true);
+        setIsUploading(true)
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('comicId', initialData.id.toString());
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('comicId', initialData.id.toString())
           const response = await fetch('/api/upload/comic/cover', {
             method: 'POST',
             body: formData,
-          });
+          })
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`)
           }
-          const result = await response.json() as Comic
-          setComic((prev) => ({ ...prev, coverUrl: result.coverUrl }));
-          setPreviewImage(result.coverUrl);
-          setRemoteImageUrl('');
-          toast.success('封面图片上传成功');
+          const result = (await response.json()) as Comic
+          setComic((prev) => ({ ...prev, coverUrl: result.coverUrl }))
+          setPreviewImage(result.coverUrl)
+          setRemoteImageUrl('')
+          toast.success('封面图片上传成功')
         } catch (error) {
-          console.error('封面图片上传失败:', error);
-          toast.error('封面图片上传失败，请重试');
+          console.error('封面图片上传失败:', error)
+          toast.error('封面图片上传失败，请重试')
         } finally {
-          setIsUploading(false);
+          setIsUploading(false)
         }
       }
     },
-    [initialData.id]
-  );
+    [initialData.id],
+  )
 
   const handleRemoteImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,7 +106,7 @@ export function EditComicForm({
       setComic((prev) => ({ ...prev, coverUrl: url }))
     },
     [],
-  );
+  )
 
   const handleSaveComic = async () => {
     try {
@@ -111,13 +115,13 @@ export function EditComicForm({
         ...comic,
         coverUrl: coverUrl ?? null,
       }
-      
+
       const _savedComic = await updateComic.mutateAsync({
         id: initialData.id,
         ...comicData,
       })
       toast.success('漫画更新成功')
-      
+
       onClose()
       onComicSaved()
     } catch (error) {
@@ -135,9 +139,7 @@ export function EditComicForm({
       isKeyboardDismissDisabled={true}
     >
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">
-          编辑漫画
-        </ModalHeader>
+        <ModalHeader className="flex flex-col gap-1">编辑漫画</ModalHeader>
         <ModalBody>
           <Input
             label="标题"
@@ -147,7 +149,9 @@ export function EditComicForm({
           <Input
             label="作者"
             value={comic.author ?? ''}
-            onChange={(e) => setComic({ ...comic, author: e.target.value || null })}
+            onChange={(e) =>
+              setComic({ ...comic, author: e.target.value || null })
+            }
           />
           <Textarea
             label="描述"

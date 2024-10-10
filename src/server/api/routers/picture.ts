@@ -146,7 +146,13 @@ export const pictureRouter = createTRPCRouter({
 
         // 删除图片集的目录
         try {
-          const pictureDir = path.join(process.cwd(), 'public', 'uploads', 'pictures', input.id.toString())
+          const pictureDir = path.join(
+            process.cwd(),
+            'public',
+            'uploads',
+            'pictures',
+            input.id.toString(),
+          )
           await fs.remove(pictureDir)
         } catch (error) {
           console.error(`删除图片集目录失败: ${input.id}`, error)

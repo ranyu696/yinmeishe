@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl= env("DIRECT_URL")
 }
 
 model Post {
@@ -27,13 +28,49 @@ model IngestSettings {
 }
 
 model Category {
-  id       Int          @id @default(autoincrement())
-  name     String
-  type     CategoryType
-  comics   Comic[]
-  novels   Novel[]
-  Pictures Picture[]
-  videos   Video[]
+  id             Int                @id @default(autoincrement()) // 主键，自增
+  name           String             // 分类名称
+  url            String?
+  type           CategoryType       // 分类类型（例如：Video, Novel, Picture, Comic）
+  parentId       Int?               // 父分类ID，可为空
+  parent         Category?          @relation("SubCategories", fields: [parentId], references: [id]) // 父分类关系
+  subCategories  Category[]         @relation("SubCategories") // 子分类关系
+  comics         Comic[]            // 关联的漫画
+  novels         Novel[]            // 关联的小说
+  pictures       Picture[]          // 关联的图片
+  videos         Video[]            // 关联的视频
+  mappings       CategoryMapping[]  // 分类映射关系
+  isActive       Boolean            @default(true) // 分类是否激活，默认为true
+  order          Int                @default(0) // 排序顺序，默认为0
+
+  @@index([parentId]) // 在parentId上创建索引以提高查询性能
+}
+
+model CategoryMapping {
+  id            Int         @id @default(autoincrement())
+  externalId    Int
+  internalId    Int
+  externalApiId Int
+  category      Category    @relation(fields: [internalId], references: [id])
+  externalApi   ExternalApi @relation(fields: [externalApiId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([externalId, externalApiId])
+  @@index([internalId])
+  @@index([externalApiId])
+}
+
+model ExternalApi {
+  id              Int               @id @default(autoincrement())
+  name            String
+  url             String
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  categoryMappings CategoryMapping[]
+
+  @@index([isActive])
 }
 
 model Video {
@@ -41,21 +78,30 @@ model Video {
   categoryId  Int
   title       String
   description String?
-  playUrl     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  dailyPlays  Int      @default(0)
-  playerType  String   @default("dplayer")
-  totalPlays  Int      @default(0)
-  weeklyPlays Int      @default(0)
-  externalId  String?  @unique
+  views       Int      @default(0)
   isActive    Boolean  @default(true)
   coverUrl    String
   category    Category @relation(fields: [categoryId], references: [id])
+  videoSources VideoSource[]
 
   @@index([categoryId])
   @@index([isActive])
 }
+
+model VideoSource {
+  id         Int      @id @default(autoincrement())
+  video      Video    @relation(fields: [videoId], references: [id])
+  videoId    Int
+  playUrl    String
+  playerType String   @default("dplayer")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([videoId])
+}
+
 
 model Novel {
   id          Int            @id @default(autoincrement())
@@ -66,7 +112,7 @@ model Novel {
   description String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-  viewCount   Int            @default(0)
+  views   Int            @default(0)
   isActive    Boolean        @default(true)
   coverUrl    String?
   category    Category       @relation(fields: [categoryId], references: [id])

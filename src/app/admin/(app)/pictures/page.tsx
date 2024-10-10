@@ -343,6 +343,7 @@ export default function ImageSetsPage() {
                     <Image
                       src={imageSet.coverUrl}
                       alt={imageSet.title}
+                      fallbackSrc="https://via.placeholder.com/72x128"
                       width={72}
                       height={128}
                       className="rounded object-cover"

@@ -5,112 +5,77 @@ export enum CategoryType {
   Comic = 'Comic',
 }
 
-// 严格的Category类型
-export interface StrictCategory {
-  id: number
-  name: string
-  type: CategoryType
+// 视频资源类型
+export interface VideoResource {
+  vod_id: number
+  vod_name: string
+  type_id: number
+  type_name: string
+  vod_en: string
+  vod_time: string
+  vod_remarks: string
+  vod_play_from: string
+  vod_pic: string
+  vod_content: string | undefined
+  vod_play_url: string
 }
 
-// API响应的Category类型
-export interface ApiCategory {
-  id: number
-  name: string
-  type: string
+// 分类类型
+export interface Category {
+  type_id: number
+  type_pid: number
+  type_name: string
 }
 
-// 用于表单输入的Category类型
-export type CategoryInput = Omit<StrictCategory, 'id'> & {
-  id?: number
+// API 响应类型
+export interface ApiResponse {
+  code: number
+  msg: string
+  page: string
+  pagecount: string
+  limit: string
+  total: number
+  list: VideoResource[]
+  class: Category[]
 }
 
-// 通用Category类型，用于大多数情况
-export type Category = StrictCategory | ApiCategory
-export interface Video {
-  id: number
-  title: string
-  description: string | null
-  thumbnailUrl: string | null
-  playUrl: string
-  playerType: string
-  categoryId: number
-  totalPlays: number
-  dailyPlays: number
-  weeklyPlays: number
-  createdAt: Date
-  updatedAt: Date
-  category?: {
+// 用于 getResources 查询的输入类型
+export interface GetResourcesInput {
+  apiId: number
+  page: number
+  categoryId?: number
+}
+
+// getResources 查询的返回类型
+export interface GetResourcesOutput {
+  resources: {
+    id: number
     name: string
-  }
+    category: string
+    playerType: string
+    updatedAt: string
+  }[]
+  total: number
+  page: number
 }
 
-export interface VideoInput {
-  title: string
-  description: string
-  thumbnailUrl: string
-  playUrl: string
-  categoryId: number
-}
-export interface Novel {
-  id: number
-  categoryId: number
-  title: string
-  author: string
-  description: string
-  coverImagePath: string
-  viewCount: number
-  createdAt: Date
-  updatedAt: Date
-  category: Category
+// 外部分类类型
+export interface ExternalCategory {
+  type_id: number
+  type_name: string
 }
 
-export interface Chapter {
-  id: number
-  novelId: number
-  chapterNumber: number
-  title: string
-  content: string
-  createdAt: Date
-  updatedAt: Date
+// 分类映射类型
+export interface CategoryMapping {
+  externalId: number
+  internalId: number
 }
 
-export interface NovelListData {
-  novels: Novel[]
-  totalPages: number
-  totalCount: number // 添加这行
-}
-export enum AdvertisementType {
-  BANNER = 'BANNER',
-  ICON = 'ICON',
-}
+// VideoListResponse 和 VideoDetailsResponse 类型
+export type VideoListResponse = ApiResponse
+export type VideoDetailsResponse = ApiResponse
 
-export interface Advertisement {
-  id: number
-  type: AdvertisementType
-  title?: string
-  imagePath: string
-  linkUrl?: string
-  startDate?: Date
-  endDate?: Date
-  order: number
-}
-export interface DataSource {
-  id: number
-  name: string
-  baseUrl: string
-  apiKey: string | null
-  listPath: string
-  detailPath: string
-  createdAt: Date
-  updatedAt: Date
-  categories: { internalCategoryId: number | null }[]
-}
-export interface Task {
-  id: number
-  status: string
-  processedItems: number
-  totalItems: number
-  startedAt: Date
-  completedAt: Date | null
-  // 添加其他必要的字段
+// CategoryListResponse 类型
+export interface CategoryListResponse {
+  class: Category[]
 }

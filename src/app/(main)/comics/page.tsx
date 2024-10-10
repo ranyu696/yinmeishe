@@ -8,7 +8,7 @@ import { api } from '~/trpc/server'
 export async function generateMetadata(): Promise<Metadata> {
   const siteName =
     ((await api.systemSettings.getOne({
-      category: 'general',
+      category: 'basic',
       key: 'siteName',
     })) as string) ?? '小新漫画'
   const totalComicsData = await api.comic.getAll({})
@@ -56,7 +56,6 @@ export default async function ComicsHomePage() {
             <h2 className="text-2xl font-semibold">{category.name}</h2>
             <Link href={`/comics/category/${category.id}`}>
               <Button
-                as="a"
                 color="primary"
                 variant="ghost"
                 endContent={<ChevronRight size={16} />}

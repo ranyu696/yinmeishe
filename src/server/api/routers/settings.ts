@@ -1,6 +1,5 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
-import { uploadImage } from '~/server/uploadFunctions'
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc'
 
 // 定义更具体的值类型
@@ -19,19 +18,6 @@ const settingSchema = z.object({
 })
 
 export const systemSettingsRouter = createTRPCRouter({
-  uploadImage: protectedProcedure
-    .input(
-      z.object({
-        imageData: z.string(),
-        fileName: z.string(),
-        category: z.string(), // 例如：'logo', 'favicon', 等
-      }),
-    )
-    .mutation(async ({ input }) => {
-      const { imageData, fileName, category } = input
-      const result = await uploadImage(imageData, fileName, category)
-      return result
-    }),
   getAll: publicProcedure.query(async ({ ctx }) => {
     try {
       const settings = await ctx.db.systemSettings.findMany()
@@ -53,7 +39,7 @@ export const systemSettingsRouter = createTRPCRouter({
     } catch (error) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to fetch settings',
+        message: '无法获取设置',
         cause: error,
       })
     }
@@ -73,7 +59,7 @@ export const systemSettingsRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch settings for category: ${input}`,
+          message: `无法获取类别设置: ${input}`,
           cause: error,
         })
       }
@@ -92,7 +78,7 @@ export const systemSettingsRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update setting',
+          message: '更新设置失败',
           cause: error,
         })
       }
@@ -114,7 +100,7 @@ export const systemSettingsRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update multiple settings',
+          message: '无法更新多个设置',
           cause: error,
         })
       }
@@ -132,7 +118,7 @@ export const systemSettingsRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to delete setting',
+          message: '删除设置失败',
           cause: error,
         })
       }

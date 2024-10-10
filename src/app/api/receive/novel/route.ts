@@ -3,16 +3,16 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { db } from '~/server/db'
 
 interface NovelRequestBody {
-  title: string;
-  author: string;
-  categoryId: string;
-  description: string;
-  coverUrl?: string;
-  externalId?: string;
+  title: string
+  author: string
+  categoryId: string
+  description: string
+  coverUrl?: string
+  externalId?: string
   chapters?: {
-    title: string;
-    content: string;
-  }[];
+    title: string
+    content: string
+  }[]
 }
 
 export async function POST(request: NextRequest) {
@@ -29,17 +29,29 @@ export async function POST(request: NextRequest) {
 
     // API 密钥验证
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== settings.apiKey) {
+    if (
+      !authHeader ||
+      !authHeader.startsWith('Bearer ') ||
+      authHeader.split(' ')[1] !== settings.apiKey
+    ) {
       return NextResponse.json({ error: 'API 密钥无效' }, { status: 401 })
     }
 
-    const body = await request.json() as NovelRequestBody
+    const body = (await request.json()) as NovelRequestBody
 
     // 验证必填字段
-    const requiredFields: (keyof NovelRequestBody)[] = ['title', 'author', 'categoryId', 'description'];
+    const requiredFields: (keyof NovelRequestBody)[] = [
+      'title',
+      'author',
+      'categoryId',
+      'description',
+    ]
     for (const field of requiredFields) {
       if (!body[field]) {
-        return NextResponse.json({ error: `${field} 是必填字段` }, { status: 400 })
+        return NextResponse.json(
+          { error: `${field} 是必填字段` },
+          { status: 400 },
+        )
       }
     }
 
@@ -54,11 +66,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 准备章节数据
-    const chaptersData: Prisma.NovelChapterCreateManyNovelInput[] = body.chapters?.map((chapter, index) => ({
-      chapterNumber: index + 1,
-      title: chapter.title,
-      content: chapter.content,
-    })) ?? []
+    const chaptersData: Prisma.NovelChapterCreateManyNovelInput[] =
+      body.chapters?.map((chapter, index) => ({
+        chapterNumber: index + 1,
+        title: chapter.title,
+        content: chapter.content,
+      })) ?? []
 
     // 使用事务来确保小说和所有章节一起创建
     const result = await db.$transaction(async (prisma) => {
@@ -66,7 +79,10 @@ export async function POST(request: NextRequest) {
 
       if (chaptersData.length > 0) {
         await prisma.novelChapter.createMany({
-          data: chaptersData.map(chapter => ({ ...chapter, novelId: novel.id })),
+          data: chaptersData.map((chapter) => ({
+            ...chapter,
+            novelId: novel.id,
+          })),
         })
       }
 
@@ -74,8 +90,10 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('小说创建成功:', result)
-    return NextResponse.json({ message: '内容已成功摄取', data: result }, { status: 201 })
-
+    return NextResponse.json(
+      { message: '内容已成功摄取', data: result },
+      { status: 201 },
+    )
   } catch (error) {
     console.error('处理请求时发生错误:', error)
 
