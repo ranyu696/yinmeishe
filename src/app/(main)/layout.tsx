@@ -4,7 +4,8 @@ import BottomLinks from '../_components/BottomLinks'
 import BottomTags from '../_components/BottomTags'
 import Categor from '../_components/Categor'
 import Footer from '../_components/Footer'
-import Heads from '../_components/Heads'
+import Heads from '../_components/Heads';
+
 import IconAds from '../_components/IconAds'
 import PostHogPageView from '../_components/posthog/PostHogPageView'
 import { PHProvider } from '../_components/posthog/providers'
